@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reporte Online</title>
+    <!-- Librerías necesarias -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #contenedor-boton { margin-bottom: 20px; }
+        #exportarPDF {
+            background-color: #d9534f; /* Rojo llamativo */
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #exportarPDF:hover { background-color: #c9302c; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Reporte desde Google Sheets</h1>
+    <!-- Botón arriba de la tabla -->
+    <div id="contenedor-boton">
+        <button id="exportarPDF">⬇ Descargar PDF</button>
+    </div>
+    <!-- Contenedor de la tabla -->
+    <div id="reporte">Cargando datos...</div>
+
+    <script>
+        // Configuración inicial
+        const { jsPDF } = window.jspdf;
+        const url = 'https://script.google.com/macros/s/AKfycbzbIvQ8FP4iGxSTvLJrLCs5qhME0GrHg8VK4Qaecf9zFXF9XtHeSUOGeW2JWCyQGHsU-Q/exec'; // ¡Reemplaza con tu URL!
+
+        // Función para exportar a PDF
+        document.getElementById('exportarPDF').addEventListener('click', exportarAPDF);
+
+        function exportarAPDF() {
+            const tabla = document.getElementById('tablaDatos');
+            if (!tabla) {
+                alert('Espera a que se carguen los datos.');
+                return;
+            }
+            
+            html2canvas(tabla).then(canvas => {
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgWidth = 190; // Ancho en mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                pdf.addImage(canvas, 'PNG', 10, 10, imgWidth, imgHeight);
+                pdf.save('reporte.pdf');
+            });
+        }
+
+        // Cargar datos desde Google Sheets
+        fetch(url)
+            .then(response => response.text())
+            .then(csv => {
+                Papa.parse(csv, {
+                    header: true,
+                    complete: (results) => {
+                        const data = results.data;
+                        let html = '<table id="tablaDatos">';
+                        
+                        // Encabezados
+                        html += '<tr>';
+                        Object.keys(data[0]).forEach(key => {
+                            html += `<th>${key}</th>`;
+                        });
+                        html += '</tr>';
+                        
+                        // Filas de datos
+                        data.forEach(row => {
+                            html += '<tr>';
+                            Object.values(row).forEach(val => {
+                                html += `<td>${val || ''}</td>`;
+                            });
+                            html += '</tr>';
+                        });
+                        
+                        html += '</table>';
+                        document.getElementById('reporte').innerHTML = html;
+                    },
+                    error: (err) => {
+                        document.getElementById('reporte').innerHTML = '❌ Error al cargar datos.';
+                        console.error(err);
+                    }
+                });
+            })
+            .catch(error => {
+                document.getElementById('reporte').innerHTML = '❌ Error: ' + error.message;
+            });
+    </script>
+</body>
+</html>
